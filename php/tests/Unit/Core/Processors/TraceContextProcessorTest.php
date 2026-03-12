@@ -8,7 +8,7 @@ use Adheart\Logging\Core\Processors\TraceContextProcessor;
 use Adheart\Logging\Core\Trace\TraceContextProviderInterface;
 use PHPUnit\Framework\TestCase;
 
-final class TraceContextEnricherProcessorTest extends TestCase
+final class TraceContextProcessorTest extends TestCase
 {
     public function testMergesTraceDataFromProvidersWithoutOverridingExistingKeys(): void
     {

@@ -29,7 +29,7 @@
         "phpunit/phpunit": "^10.5",
         "vimeo/psalm": "^6.15",
         "squizlabs/php_codesniffer": "^4.0",
-        "symfony/console": "^5.4 || 6.4 || ^7.0",
+        "symfony/console": "^6.0 || ^7.0",
         "symfony/dependency-injection": "^5.4 || ^6.4 || ^7.0",
         "nikic/php-parser": "^5.0"
     },

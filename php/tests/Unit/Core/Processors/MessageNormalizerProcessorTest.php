@@ -38,4 +38,19 @@ final class MessageNormalizerProcessorTest extends TestCase
         self::assertSame('{"event":"login","status":"ok"}', $result['context']['message_json']);
         self::assertSame('bar', $result['context']['foo']);
     }
+
+    public function testNormalizesNonStringMessageAndInvalidContext(): void
+    {
+        $processor = new MessageNormalizerProcessor();
+
+        $result = $processor([
+            'message' => 123,
+            'context' => 'not-an-array',
+            'extra' => [],
+        ]);
+
+        self::assertSame('123', $result['message']);
+        self::assertSame([], $result['context']);
+        self::assertArrayNotHasKey('message_json', $result['context']);
+    }
 }

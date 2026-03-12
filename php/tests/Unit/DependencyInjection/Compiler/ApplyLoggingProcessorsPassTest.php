@@ -6,6 +6,7 @@ namespace Tests\Unit\DependencyInjection\Compiler;
 
 use Adheart\Logging\DependencyInjection\Compiler\ApplyLoggingProcessorsPass;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
@@ -59,5 +60,49 @@ final class ApplyLoggingProcessorsPassTest extends TestCase
         );
 
         $pass->process($container);
+    }
+
+    public function testResolvesMonologLoggerAliasesAndAvoidsDuplicates(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setDefinition('monolog.logger.actual', new Definition(\Monolog\Logger::class));
+        $container->setAlias('monolog.logger', new Alias('monolog.logger.actual'));
+        $container->setAlias('monolog.logger.billing', new Alias('monolog.logger.actual'));
+        $container->setDefinition('app.processor.a', new Definition());
+        $container->setParameter('logging.processor_service_ids', ['app.processor.a']);
+
+        (new ApplyLoggingProcessorsPass())->process($container);
+
+        $calls = $container->getDefinition('monolog.logger.actual')->getMethodCalls();
+        self::assertCount(1, $calls);
+        self::assertSame('pushProcessor', $calls[0][0]);
+        self::assertSame('app.processor.a', (string) $calls[0][1][0]);
+    }
+
+    public function testAcceptsProcessorServiceAlias(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setDefinition('monolog.logger', new Definition(\Monolog\Logger::class));
+        $container->setDefinition('app.processor.real', new Definition());
+        $container->setAlias('app.processor.alias', new Alias('app.processor.real'));
+        $container->setParameter('logging.processor_service_ids', ['app.processor.alias']);
+
+        (new ApplyLoggingProcessorsPass())->process($container);
+
+        $calls = $container->getDefinition('monolog.logger')->getMethodCalls();
+        self::assertCount(1, $calls);
+        self::assertSame('pushProcessor', $calls[0][0]);
+        self::assertSame('app.processor.alias', (string) $calls[0][1][0]);
+    }
+
+    public function testSkipsWhenProcessorListIsEmpty(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setDefinition('monolog.logger', new Definition(\Monolog\Logger::class));
+        $container->setParameter('logging.processor_service_ids', []);
+
+        (new ApplyLoggingProcessorsPass())->process($container);
+
+        self::assertSame([], $container->getDefinition('monolog.logger')->getMethodCalls());
     }
 }

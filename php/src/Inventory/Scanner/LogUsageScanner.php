@@ -162,6 +162,10 @@ final class LogUsageScanner
             return null;
         }
 
+        if ($normalized === '.' || $normalized === './') {
+            return '';
+        }
+
         if (str_starts_with($normalized, $this->projectDir . '/')) {
             $normalized = substr($normalized, strlen($this->projectDir) + 1);
         }

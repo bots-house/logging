@@ -27,10 +27,6 @@ final class LoggingBundle extends Bundle
     #[\Override]
     public function getContainerExtension(): ?ExtensionInterface
     {
-        if (!class_exists(\Symfony\Component\DependencyInjection\Extension\Extension::class)) {
-            return null;
-        }
-
         if (!$this->extension instanceof ExtensionInterface) {
             $this->extension = new AdheartLoggingExtension();
         }
