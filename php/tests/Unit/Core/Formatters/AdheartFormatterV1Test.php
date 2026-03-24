@@ -194,4 +194,34 @@ final class AdheartFormatterV1Test extends TestCase
             $decoded['timestamp']
         );
     }
+
+    public function testSupportsMonolog3StyleRecordObjectWithToArray(): void
+    {
+        $formatter = new SchemaFormatterV1('1.0.0', 'billing-api', '2026.03');
+
+        $record = new class () {
+            /**
+             * @return array<string,mixed>
+             */
+            public function toArray(): array
+            {
+                return [
+                    'message' => 'test',
+                    'context' => ['foo' => 'bar'],
+                    'extra' => [],
+                    'channel' => 'payments',
+                    'level' => 200,
+                    'level_name' => 'INFO',
+                    'datetime' => new \DateTimeImmutable('2026-03-11T13:17:19.308Z'),
+                ];
+            }
+        };
+
+        $decoded = json_decode($formatter->format($record), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('test', $decoded['message']);
+        self::assertSame('billing-api', $decoded['service']['name']);
+        self::assertSame('2026.03', $decoded['service']['version']);
+        self::assertSame('bar', $decoded['context']['foo']);
+    }
 }

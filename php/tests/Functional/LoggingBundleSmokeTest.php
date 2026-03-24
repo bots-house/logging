@@ -64,13 +64,32 @@ final class LoggingBundleSmokeTest extends TestCase
 
         $records = $handler->getRecords();
         self::assertCount(1, $records);
-        self::assertSame('[json moved to context.message_json]', $records[0]['message']);
-        self::assertSame('{"event":"login","status":"ok"}', $records[0]['context']['message_json']);
-        self::assertSame('r-1', $records[0]['context']['request_id']);
+        $record = $this->recordToArray($records[0]);
+        self::assertSame('[json moved to context.message_json]', $record['message']);
+        self::assertSame('{"event":"login","status":"ok"}', $record['context']['message_json']);
+        self::assertSame('r-1', $record['context']['request_id']);
 
         $formatted = $handler->getFormatter()->format($records[0]);
         $payload = json_decode($formatted, true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('smoke-app', $payload['service']['name']);
         self::assertSame('1.0.0', $payload['version']);
+    }
+
+    /**
+     * @param mixed $record
+     *
+     * @return array<string,mixed>
+     */
+    private function recordToArray(mixed $record): array
+    {
+        if (is_array($record)) {
+            return $record;
+        }
+
+        if (is_object($record) && method_exists($record, 'toArray')) {
+            return $record->toArray();
+        }
+
+        return [];
     }
 }

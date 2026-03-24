@@ -6,6 +6,7 @@ namespace Adheart\Logging\Core\Formatters;
 
 use DateTimeZone;
 use Monolog\Formatter\JsonFormatter;
+use Monolog\LogRecord;
 
 /**
  * Builds the final JSON log using a unified schema:
@@ -46,9 +47,13 @@ final class SchemaFormatterV1 extends JsonFormatter
         $this->serviceVersion = $serviceVersion;
     }
 
+    /**
+     * @param array<string,mixed>|LogRecord $record
+     */
     #[\Override]
-    public function format(array $record): string
+    public function format($record): string
     {
+        $record = $this->toRecordArray($record);
         $timestamp = $this->formatTimestamp($record);
 
         $level = [
@@ -56,8 +61,8 @@ final class SchemaFormatterV1 extends JsonFormatter
             'severity' => isset($record['level_name']) ? (string)$record['level_name'] : null,
         ];
 
-        $context = $record['context'];
-        $extra = $record['extra'];
+        $context = isset($record['context']) && is_array($record['context']) ? $record['context'] : [];
+        $extra = isset($record['extra']) && is_array($record['extra']) ? $record['extra'] : [];
 
         $service = $this->extractObject('service', $context, $extra);
         if ($service === [] && ($this->serviceName !== null || $this->serviceVersion !== null)) {
@@ -89,6 +94,24 @@ final class SchemaFormatterV1 extends JsonFormatter
         ];
 
         return $this->toJson($data, true) . ($this->appendNewline ? "\n" : '');
+    }
+
+    /**
+     * @param array<string,mixed>|LogRecord $record
+     *
+     * @return array<string,mixed>
+     */
+    private function toRecordArray($record): array
+    {
+        if (is_array($record)) {
+            return $record;
+        }
+
+        if (!is_object($record) || !method_exists($record, 'toArray')) {
+            return [];
+        }
+
+        return $record->toArray();
     }
 
     /**
@@ -194,7 +217,7 @@ final class SchemaFormatterV1 extends JsonFormatter
      */
     private function formatTimestamp(array $record): string
     {
-        if (!isset($record['datetime']) || !$record['datetime'] instanceof \DateTimeImmutable) {
+        if (!isset($record['datetime']) || !$record['datetime'] instanceof \DateTimeInterface) {
             $record['datetime'] = new \DateTimeImmutable('now', new DateTimeZone('UTC'));
         }
 

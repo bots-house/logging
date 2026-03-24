@@ -53,4 +53,32 @@ final class MessageNormalizerProcessorTest extends TestCase
         self::assertSame([], $result['context']);
         self::assertArrayNotHasKey('message_json', $result['context']);
     }
+
+    public function testSupportsMonolog3StyleRecordObject(): void
+    {
+        $processor = new MessageNormalizerProcessor();
+
+        $record = new class ('{"event":"login"}', ['foo' => 'bar']) {
+            public function __construct(
+                public string $message,
+                public array $context,
+            ) {
+            }
+
+            public function with(?string $message = null, ?array $context = null): self
+            {
+                return new self(
+                    $message ?? $this->message,
+                    $context ?? $this->context,
+                );
+            }
+        };
+
+        $result = $processor($record);
+
+        self::assertNotSame($record, $result);
+        self::assertSame('[json moved to context.message_json]', $result->message);
+        self::assertSame('{"event":"login"}', $result->context['message_json']);
+        self::assertSame('bar', $result->context['foo']);
+    }
 }

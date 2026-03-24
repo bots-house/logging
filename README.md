@@ -16,7 +16,7 @@
 ## Сумісність
 
 - PHP: `^8.2`
-- Monolog: `^2.3`
+- Monolog: `^2.3 || ^3.0`
 - Symfony components:
   - `symfony/http-kernel`: `^5.4 || ^6.4 || ^7.0`
   - `symfony/config`: `^5.4 || ^6.4 || ^7.0`

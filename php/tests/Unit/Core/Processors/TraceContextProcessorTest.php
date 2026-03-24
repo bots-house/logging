@@ -69,4 +69,38 @@ final class TraceContextProcessorTest extends TestCase
 
         self::assertSame(['trace_id' => 'new-trace-id'], $result['extra']['trace']);
     }
+
+    public function testSupportsMonolog3StyleRecordObject(): void
+    {
+        $processor = new TraceContextProcessor([
+            new class () implements TraceContextProviderInterface {
+                #[\Override]
+                public function provide(): array
+                {
+                    return [
+                        'trace_id' => 'provider-trace-id',
+                        'span_id' => 'provider-span-id',
+                    ];
+                }
+            },
+        ]);
+
+        $record = new class (['trace' => ['trace_id' => 'existing-trace-id']]) {
+            public function __construct(
+                public array $extra,
+            ) {
+            }
+
+            public function with(?array $extra = null): self
+            {
+                return new self($extra ?? $this->extra);
+            }
+        };
+
+        $result = $processor($record);
+
+        self::assertNotSame($record, $result);
+        self::assertSame('existing-trace-id', $result->extra['trace']['trace_id']);
+        self::assertSame('provider-span-id', $result->extra['trace']['span_id']);
+    }
 }
