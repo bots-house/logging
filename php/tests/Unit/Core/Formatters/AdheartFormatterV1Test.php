@@ -224,4 +224,44 @@ final class AdheartFormatterV1Test extends TestCase
         self::assertSame('2026.03', $decoded['service']['version']);
         self::assertSame('bar', $decoded['context']['foo']);
     }
+
+    public function testFallsBackToEmptyRecordWhenObjectHasNoToArray(): void
+    {
+        $formatter = new SchemaFormatterV1();
+
+        $json = $formatter->format(new \stdClass());
+        $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('', $decoded['message']);
+        self::assertMatchesRegularExpression(
+            '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/',
+            $decoded['timestamp']
+        );
+    }
+
+    public function testReadsServiceFromExtraWhenContextHasNone(): void
+    {
+        $formatter = new SchemaFormatterV1('1.0.0', 'fallback', 'fallback-version');
+
+        $record = [
+            'message' => 'event',
+            'context' => [],
+            'extra' => [
+                'service' => [
+                    'name' => 'from-extra',
+                    'version' => 'v9',
+                ],
+            ],
+            'channel' => 'app',
+            'level' => 200,
+            'level_name' => 'INFO',
+            'datetime' => new \DateTimeImmutable('2026-03-11T13:17:19.308Z'),
+        ];
+
+        $decoded = json_decode($formatter->format($record), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('from-extra', $decoded['service']['name']);
+        self::assertSame('v9', $decoded['service']['version']);
+        self::assertArrayNotHasKey('service', $decoded['context']['extra']);
+    }
 }

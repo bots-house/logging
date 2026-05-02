@@ -103,4 +103,95 @@ final class TraceContextProcessorTest extends TestCase
         self::assertSame('existing-trace-id', $result->extra['trace']['trace_id']);
         self::assertSame('provider-span-id', $result->extra['trace']['span_id']);
     }
+
+    public function testReturnsScalarRecordUnchanged(): void
+    {
+        $processor = new TraceContextProcessor([
+            new class () implements TraceContextProviderInterface {
+                #[\Override]
+                public function provide(): array
+                {
+                    return ['trace_id' => 'ignored'];
+                }
+            },
+        ]);
+
+        self::assertSame('not-a-record', $processor('not-a-record'));
+    }
+
+    public function testCoercesNonArrayTraceOnObjectRecord(): void
+    {
+        $processor = new TraceContextProcessor([
+            new class () implements TraceContextProviderInterface {
+                #[\Override]
+                public function provide(): array
+                {
+                    return ['trace_id' => 'new-trace-id'];
+                }
+            },
+        ]);
+
+        $record = new class (['trace' => 'not-an-array']) {
+            /**
+             * @param array<string,mixed> $extra
+             */
+            public function __construct(
+                public array $extra,
+            ) {
+            }
+
+            /**
+             * @param array<string,mixed>|null $extra
+             */
+            public function with(?array $extra = null): self
+            {
+                return new self($extra ?? $this->extra);
+            }
+        };
+
+        $result = $processor($record);
+
+        self::assertSame(['trace_id' => 'new-trace-id'], $result->extra['trace']);
+    }
+
+    public function testMutatesExtraPropertyWhenWithMethodIsMissing(): void
+    {
+        $processor = new TraceContextProcessor([
+            new class () implements TraceContextProviderInterface {
+                #[\Override]
+                public function provide(): array
+                {
+                    return ['trace_id' => 'set-via-property'];
+                }
+            },
+        ]);
+
+        $record = new class {
+            /** @var array<string,mixed> */
+            public array $extra = [];
+        };
+
+        $result = $processor($record);
+
+        self::assertSame($record, $result);
+        self::assertSame('set-via-property', $result->extra['trace']['trace_id']);
+    }
+
+    public function testReturnsObjectRecordUnchangedWhenNoWithAndNoExtraProperty(): void
+    {
+        $processor = new TraceContextProcessor([
+            new class () implements TraceContextProviderInterface {
+                #[\Override]
+                public function provide(): array
+                {
+                    return ['trace_id' => 'unused'];
+                }
+            },
+        ]);
+
+        $record = new \stdClass();
+
+        self::assertSame($record, $processor($record));
+        self::assertObjectNotHasProperty('extra', $record);
+    }
 }

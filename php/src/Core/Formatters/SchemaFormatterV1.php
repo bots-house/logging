@@ -48,7 +48,9 @@ final class SchemaFormatterV1 extends JsonFormatter
     }
 
     /**
-     * @param array<string,mixed>|LogRecord $record
+     * @param array<array-key,mixed>|object $record
+     *
+     * @psalm-suppress MoreSpecificImplementedParamType
      */
     #[\Override]
     public function format($record): string
@@ -97,21 +99,25 @@ final class SchemaFormatterV1 extends JsonFormatter
     }
 
     /**
-     * @param array<string,mixed>|LogRecord $record
+     * @param array<array-key,mixed>|object $record
      *
      * @return array<string,mixed>
      */
     private function toRecordArray($record): array
     {
         if (is_array($record)) {
+            /** @var array<string,mixed> $record */
             return $record;
         }
 
-        if (!is_object($record) || !method_exists($record, 'toArray')) {
+        if (!method_exists($record, 'toArray')) {
             return [];
         }
 
-        return $record->toArray();
+        /** @var array<string,mixed> $array */
+        $array = $record->toArray();
+
+        return $array;
     }
 
     /**
@@ -223,7 +229,7 @@ final class SchemaFormatterV1 extends JsonFormatter
 
         $dt = $record['datetime'];
 
-        $utc = $dt->setTimezone(new DateTimeZone('UTC'));
+        $utc = \DateTimeImmutable::createFromInterface($dt)->setTimezone(new DateTimeZone('UTC'));
 
         return $utc->format('Y-m-d\TH:i:s.v\Z');
     }
